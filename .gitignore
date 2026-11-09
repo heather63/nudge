@@ -1,0 +1,11 @@
+.env
+nudge.db
+nudge.db-wal
+nudge.db-shm
+chunks.seed.json
+__pycache__/
+.venv/
+token.json
+credentials.json
+.DS_Store
+network_security_syllabus.pdf

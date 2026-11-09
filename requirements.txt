@@ -1,0 +1,13 @@
+# phase 1
+discord.py>=2.3,<3
+
+# phase 2-3 (Google Tasks + Calendar)
+google-api-python-client>=2.120
+google-auth-oauthlib>=1.2
+google-auth-httplib2>=0.2
+
+# phase 4 (ingestion + decomposition)
+watchdog>=4.0
+pypdf>=4.2
+python-docx>=1.1
+anthropic>=0.40
