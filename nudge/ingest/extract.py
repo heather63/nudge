@@ -1,11 +1,6 @@
-"""Assignment documents to plain text. Context for decomposition only.
-
-File activity is never a completion signal — these documents exist
-solely so the LLM has something to break down.
-"""
+"""Assignment documents to plain text, for `nudge size`."""
 from __future__ import annotations
 
-import hashlib
 import logging
 from pathlib import Path
 
@@ -13,14 +8,6 @@ log = logging.getLogger(__name__)
 
 SUPPORTED = {".pdf", ".docx", ".md", ".markdown", ".txt"}
 MAX_CHARS_PER_DOC = 60_000  # a spec longer than this is padding, not content
-
-
-def sha256(path: Path) -> str:
-    digest = hashlib.sha256()
-    with path.open("rb") as handle:
-        for block in iter(lambda: handle.read(65536), b""):
-            digest.update(block)
-    return digest.hexdigest()
 
 
 def is_supported(path: Path) -> bool:
@@ -60,14 +47,15 @@ def _extract_docx(path: Path) -> str:
     return "\n".join(parts)
 
 
-def read_folder(folder: Path) -> list[tuple[Path, str, str]]:
-    """(path, sha256, text) for every supported document in an assignment folder."""
+def read_documents(path: Path) -> list[tuple[str, str]]:
+    """(file name, text) for a single document, or every supported one in a folder."""
+    paths = [path] if path.is_file() else sorted(p for p in path.iterdir() if p.is_file())
     results = []
-    for path in sorted(folder.iterdir()):
-        if not path.is_file() or not is_supported(path):
+    for item in paths:
+        if not is_supported(item):
             continue
         try:
-            results.append((path, sha256(path), extract(path)))
+            results.append((item.name, extract(item)))
         except Exception:  # noqa: BLE001 - one bad PDF must not stop the rest
-            log.exception("could not extract %s", path)
+            log.exception("could not extract %s", item)
     return results

@@ -1,8 +1,8 @@
-"""The Google Sheet: source of truth for what exists and how far along it is.
+"""Google Sheets transport and cell parsing.
 
-One row per assignment. Both nudge and the user write to it, so pushes are
-per-cell rather than a whole-range rewrite — a full rewrite would clobber an
-edit made between the read and the write.
+Both nudge and you write to the sheet, so writes are per-cell rather than a
+whole-range rewrite — a full rewrite would clobber an edit made between the
+read and the write.
 """
 from __future__ import annotations
 
@@ -26,7 +26,6 @@ COLUMNS: list[tuple[str, str, tuple[str, ...]]] = [
     ("name", "Assignment", ("assignment", "name", "title", "assignmentname")),
     ("course", "Class", ("class", "course", "subject")),
     ("due", "Due date", ("duedate", "due", "deadline")),
-    ("kind", "Type", ("type", "kind", "category")),
     ("expected", "Expected length", ("expectedlength", "expectedlengthtotal",
                                      "expected", "estimate", "length")),
     ("percent", "% done", ("done", "pctdone", "percentdone", "percent",
@@ -34,7 +33,6 @@ COLUMNS: list[tuple[str, str, tuple[str, ...]]] = [
     ("repeat", "Repeats", ("repeats", "repeat", "recurring", "every")),
     ("not_before", "Not before", ("notbefore", "notuntil", "availablefrom",
                                   "earliest", "startsafter", "opens")),
-    ("files", "Relevant files", ("relevantfiles", "files", "links")),
     ("sheet_id", "ID", ("id", "nudgeid", "naggyid")),
 ]
 HEADERS = [header for _, header, _ in COLUMNS]
@@ -94,17 +92,6 @@ def parse_duration(value: str | None) -> int | None:
     return int(round(total)) or None
 
 
-def format_duration(minutes: int | None) -> str:
-    if not minutes:
-        return ""
-    hours, rest = divmod(int(minutes), 60)
-    if hours and rest:
-        return f"{hours}h{rest:02d}"
-    if hours:
-        return f"{hours}h"
-    return f"{rest}m"
-
-
 _DATE_FORMATS = ("%Y-%m-%d", "%m/%d/%Y", "%m/%d/%y", "%b %d %Y", "%b %d", "%B %d")
 
 
@@ -115,14 +102,15 @@ def parse_date(value: str | None, *, now: datetime | None = None) -> datetime | 
     text = str(value).strip()
     if not text:
         return None
-    now = now or tu.now_utc()
+    year = tu.to_local(now or tu.now_utc()).year
     for fmt in _DATE_FORMATS:
+        # "Sep 17" has no year: supply this one, so Feb 29 can parse too.
+        attempt, pattern = (text, fmt) if "%Y" in fmt or "%y" in fmt else (
+            f"{text} {year}", f"{fmt} %Y")
         try:
-            parsed = datetime.strptime(text, fmt)
+            parsed = datetime.strptime(attempt, pattern)
         except ValueError:
             continue
-        if parsed.year == 1900:  # no year in the format
-            parsed = parsed.replace(year=tu.to_local(now).year)
         return datetime(
             parsed.year, parsed.month, parsed.day, 23, 59, tzinfo=config.TZ
         ).astimezone(tu.UTC)
@@ -304,55 +292,6 @@ class SheetsClient:
                 body={"valueInputOption": "USER_ENTERED", "data": data},
             )
         )
-
-    def delete_rows(self, spreadsheet_id: str, row_numbers: list[int]) -> None:
-        """Delete 1-based rows. Highest first, so earlier indices stay valid."""
-        if not row_numbers:
-            return
-        sheet_id = _sheet_id(self, spreadsheet_id)
-        requests = [
-            {
-                "deleteDimension": {
-                    "range": {
-                        "sheetId": sheet_id,
-                        "dimension": "ROWS",
-                        "startIndex": number - 1,
-                        "endIndex": number,
-                    }
-                }
-            }
-            for number in sorted(row_numbers, reverse=True)
-        ]
-        google_auth.execute(
-            self.service.spreadsheets().batchUpdate(
-                spreadsheetId=spreadsheet_id, body={"requests": requests}
-            )
-        )
-
-    def append(self, spreadsheet_id: str, rows: list[list]) -> None:
-        if not rows:
-            return
-        google_auth.execute(
-            self.service.spreadsheets()
-            .values()
-            .append(
-                spreadsheetId=spreadsheet_id,
-                range=SHEET_TITLE,
-                valueInputOption="USER_ENTERED",
-                insertDataOption="INSERT_ROWS",
-                body={"values": rows},
-            )
-        )
-
-
-def _sheet_id(client, spreadsheet_id: str) -> int:
-    meta = google_auth.execute(
-        client.service.spreadsheets().get(spreadsheetId=spreadsheet_id)
-    )
-    for sheet in meta["sheets"]:
-        if sheet["properties"]["title"] == SHEET_TITLE:
-            return sheet["properties"]["sheetId"]
-    raise ValueError(f"no {SHEET_TITLE!r} tab")
 
 
 def column_letter(index: int) -> str:

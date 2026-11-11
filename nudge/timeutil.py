@@ -49,6 +49,11 @@ def fmt_duration(minutes: float) -> str:
     return f"{hours}h{rem:02d}"
 
 
+def fmt_when(dt: datetime) -> str:
+    """'fri 9:00am' — a moment in local time, for replies."""
+    return f"{to_local(dt):%a %-I:%M%p}".lower()
+
+
 def fmt_due(dt: datetime | None, *, now: datetime | None = None) -> str:
     if dt is None:
         return "no due date"
@@ -75,7 +80,6 @@ WEEKDAYS = {
     "sat": 5, "saturday": 5,
     "sun": 6, "sunday": 6,
 }
-WEEKDAY_NAMES = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"]
 
 _REL = re.compile(r"^\s*(\d+)\s*(m|min|mins|minutes?|h|hr|hrs|hours?|d|days?)\s*$", re.I)
 _CLOCK = re.compile(r"^\s*(?:until\s+|till\s+|til\s+)?(\d{1,2})(?::(\d{2}))?\s*(am|pm)?\s*$", re.I)

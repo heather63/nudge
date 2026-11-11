@@ -15,10 +15,14 @@ import math
 from collections import defaultdict
 from dataclasses import dataclass
 from datetime import datetime, timedelta
+from typing import TYPE_CHECKING
 
 from .. import config
 from .. import timeutil as tu
-from ..store.repo import Repo, remaining_minutes
+from ..store.repo import Repo
+
+if TYPE_CHECKING:
+    from ..sheet import Assignment
 
 log = logging.getLogger(__name__)
 
@@ -140,10 +144,10 @@ def pressure(
     due_at: datetime | None,
     available_min: float | None = None,
 ) -> float:
-    """0 = plenty of room, 1 = the remaining work no longer fits.
+    """Remaining work over realistic time left. Above 1.0 it no longer fits.
 
-    This is the term that makes a ten-hour assignment due Friday outrank a
-    one-hour assignment due Wednesday: size counts, not just proximity.
+    This is what makes a ten-hour assignment due Friday outrank a one-hour
+    assignment due Wednesday: size counts, not just proximity.
     """
     if remaining_min <= 0:
         return 0.0
@@ -151,8 +155,8 @@ def pressure(
     if usable == math.inf:
         return 0.0  # no due date, no deadline pressure
     if usable <= 0:
-        return 1.0  # overdue, or due within the hour
-    return min(remaining_min / usable, 1.0)
+        return math.inf  # overdue, or due within the hour
+    return remaining_min / usable
 
 
 def headroom_minutes(
@@ -168,19 +172,10 @@ def headroom_minutes(
     return usable - remaining_min
 
 
-def fits(
-    remaining_min: float,
-    now: datetime,
-    due_at: datetime | None,
-    available_min: float | None = None,
-) -> bool:
-    return headroom_minutes(remaining_min, now, due_at, available_min) >= 0
-
-
 # --- the daily check -----------------------------------------------------
 @dataclass(slots=True)
 class CapacityWarning:
-    assignment_id: int
+    sheet_id: str
     name: str
     remaining_min: float
     usable_min: float
@@ -191,7 +186,7 @@ class CapacityWarning:
         return self.remaining_min - self.usable_min
 
 
-def read_snapshot(repo: Repo, now: datetime) -> dict[int, float]:
+def read_snapshot(repo: Repo, now: datetime) -> dict[str, float]:
     """Measured availability per assignment, while it is still fresh."""
     raw = repo.kv_get(CAPACITY_SNAPSHOT)
     if not raw:
@@ -205,10 +200,10 @@ def read_snapshot(repo: Repo, now: datetime) -> dict[int, float]:
         return {}
     if tu.minutes_between(measured_at, now) / 60.0 > SNAPSHOT_TTL_HOURS:
         return {}
-    return {int(k): float(v) for k, v in payload.get("available", {}).items()}
+    return {str(k): float(v) for k, v in payload.get("available", {}).items()}
 
 
-def write_snapshot(repo: Repo, now: datetime, available: dict[int, float]) -> None:
+def write_snapshot(repo: Repo, now: datetime, available: dict[str, float]) -> None:
     repo.kv_set(
         CAPACITY_SNAPSHOT,
         json.dumps({"measured_at": tu.iso(now), "available": available}),
@@ -221,7 +216,7 @@ def due_today(repo: Repo, now: datetime) -> bool:
 
 
 def daily_check(
-    repo: Repo, now: datetime, free_intervals_fn=None
+    assignments: list[Assignment], repo: Repo, now: datetime, free_intervals_fn=None
 ) -> list[CapacityWarning]:
     """Compare remaining work against real free time. Warn once per assignment.
 
@@ -229,51 +224,35 @@ def daily_check(
     that says something you did not already know.
     """
     warned = set(json.loads(repo.kv_get("capacity_warned") or "[]"))
-    still_warned: set[int] = set()
-    measured: dict[int, float] = {}
+    still_warned: set[str] = set()
+    measured: dict[str, float] = {}
     warnings: list[CapacityWarning] = []
 
-    rows = [
-        row
-        for row in repo.summary()
-        if tu.parse(row["due_at"]) is not None
-        and remaining_minutes(row["expected_min"], row["percent_done"]) > 0
-    ]
+    rows = [a for a in assignments if a.due_at is not None and a.remaining_min > 0]
 
     # One freeBusy call for the furthest due date, sliced per assignment.
-    # Querying per row meant fifty round trips inside a single tick.
     intervals = None
     if free_intervals_fn is not None and rows:
         horizon = min(
-            max(tu.parse(row["due_at"]) for row in rows),
+            max(a.due_at for a in rows),
             now + timedelta(days=config.CAPACITY_HORIZON_DAYS),
         )
         if horizon > now:
             try:
                 intervals = free_intervals_fn(now, horizon)
-            except Exception:  # noqa: BLE001 - fall back to the estimate
+            except Exception:  # noqa: BLE001 - fall back to the flat estimate
                 log.exception("freeBusy failed for the capacity check")
 
-    for row in rows:
-        assignment_id = int(row["id"])
-        due_at = tu.parse(row["due_at"])
-        remaining = remaining_minutes(row["expected_min"], row["percent_done"])
-
-        available = available_minutes(
-            now, due_at, intervals, tu.parse(row["available_from"])
-        )
+    for a in rows:
+        available = available_minutes(now, a.due_at, intervals, a.available_from)
         if available != math.inf:
-            measured[assignment_id] = available
-        usable = usable_minutes(now, due_at, available_min=available)
-
-        if remaining > usable:
-            still_warned.add(assignment_id)
-            if assignment_id not in warned:
-                name = (
-                    f"{row['course']} · {row['name']}" if row["course"] else row["name"]
-                )
+            measured[a.sheet_id] = available
+        usable = usable_minutes(now, a.due_at, available_min=available)
+        if a.remaining_min > usable:
+            still_warned.add(a.sheet_id)
+            if a.sheet_id not in warned:
                 warnings.append(
-                    CapacityWarning(assignment_id, name, remaining, usable, due_at)
+                    CapacityWarning(a.sheet_id, a.label, a.remaining_min, usable, a.due_at)
                 )
 
     if measured:

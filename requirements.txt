@@ -1,13 +1,12 @@
 # Discord bot
 discord.py>=2.3,<3
 
-# Google Sheets, Tasks and Calendar
+# Google Sheets and Calendar
 google-api-python-client>=2.120
 google-auth-oauthlib>=1.2
 google-auth-httplib2>=0.2
 
-# Sizing assignments from their documents
-watchdog>=4.0
+# `nudge size`: estimating an assignment's length from its documents
 pypdf>=4.2
 python-docx>=1.1
-anthropic>=0.40
+anthropic>=2.6

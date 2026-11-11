@@ -1,10 +1,7 @@
-"""LLM estimation of an assignment from its documents.
+"""Estimate an assignment's length from its documents (`nudge size`).
 
-The sheet needs an expected length for every row, and typing one for forty
-assignments is the kind of chore that kills a system before it starts. So the
-documents get read once and an estimate is proposed — behind an approval gate,
-because a wrong number silently distorts every ranking and capacity warning.
-
+The result is printed for you to type into the sheet — a wrong number silently
+distorts every ranking and capacity warning, so a person checks it first.
 The LLM never decides *when* anything happens.
 """
 from __future__ import annotations
@@ -25,7 +22,7 @@ KINDS = ("homework", "reading", "writing", "project", "exam", "quiz",
 
 
 class EstimateError(Exception):
-    """Anything that stops a proposal being produced. Worth a DM, not a crash."""
+    """Anything that stops an estimate being produced."""
 
 
 class Estimate(BaseModel):
@@ -44,7 +41,7 @@ You size a student's assignment from its own documents.
 
 - expected_minutes is the TOTAL focused time from a standing start to submitting,
   including reading the spec, setup, the work itself, and a final pass.
-- Estimate for a competent student who has done the reading, not a expert and not
+- Estimate for a competent student who has done the reading, not an expert and not
   someone starting from nothing.
 - Count only what the documents actually ask for. Do not invent deliverables.
 - A problem set is usually 2-5 hours. A term project is tens of hours. A reading
@@ -98,13 +95,17 @@ def estimate(
     client = client or _client()
     prompt = build_prompt(course, name, due_at, documents)
     try:
-        response = client.messages.parse(
+        response = client.beta.messages.parse(
             model=config.ESTIMATE_MODEL,
             max_tokens=16000,
             thinking={"type": "adaptive"},
             system=SYSTEM,
             messages=[{"role": "user", "content": prompt}],
             output_format=Estimate,
+            # If a safety classifier declines, retry server-side on the model
+            # Anthropic recommends for that category instead of failing.
+            betas=["server-side-fallback-2026-07-01"],
+            fallbacks="default",
         )
     except Exception as exc:  # noqa: BLE001
         raise EstimateError(f"{type(exc).__name__}: {exc}") from exc

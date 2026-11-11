@@ -25,9 +25,8 @@ log = logging.getLogger(__name__)
 __all__ = ["AuthError", "SCOPES", "authorize", "build_service", "execute",
            "get_credentials", "load_credentials", "save_credentials"]
 
-# Read/write on Tasks (chunks get marked complete); read-only on Calendar.
+# Read/write on the sheet; read-only on Calendar.
 SCOPES = [
-    "https://www.googleapis.com/auth/tasks",
     "https://www.googleapis.com/auth/calendar.readonly",
     "https://www.googleapis.com/auth/spreadsheets",
 ]

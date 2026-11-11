@@ -13,7 +13,6 @@ from . import config
 from . import timeutil as tu
 
 WEEKDAYS = tu.WEEKDAYS
-NAMES = tu.WEEKDAY_NAMES
 
 
 def parse_rule(text: str | None) -> set[int] | None:
@@ -29,12 +28,6 @@ def parse_rule(text: str | None) -> set[int] | None:
         elif token.strip().lower() in WEEKDAYS:
             days.add(WEEKDAYS[token.strip().lower()])
     return days or None
-
-
-def format_rule(days: set[int] | None) -> str:
-    if not days:
-        return ""
-    return "weekly:" + ",".join(NAMES[d] for d in sorted(days))
 
 
 def next_due(days: set[int], after: datetime, hour: int = 23, minute: int = 59) -> datetime:

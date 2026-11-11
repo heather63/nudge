@@ -1,7 +1,7 @@
-"""DM reply parsing.
+"""Typed DM replies. Most of the time you'll press a button instead.
 
-Case-insensitive, tolerant of extra words. Kept separate from bot.py so the
-whole command surface is testable without a Discord connection.
+Case-insensitive and tolerant of extra words: "ok done, finally" lands. Kept
+separate from bot.py so it is testable without Discord.
 """
 from __future__ import annotations
 
@@ -17,41 +17,22 @@ class Command:
 
 _UNITS = r"(?:h|hr|hrs|hours?|m|min|mins|minutes?)"
 
-# Ordered: the first pattern that matches anywhere in the message wins, so
-# "ok done, that took a while" and "yeah not now" both land correctly.
+# Ordered: the first pattern that matches anywhere in the message wins.
 _PATTERNS: list[tuple[str, re.Pattern[str]]] = [
     # Progress first — "did 30" must not be read as "done".
     ("set_percent", re.compile(r"(?P<arg>\d{1,3})\s*%", re.I)),
     ("log_minutes", re.compile(
-        rf"\b(?:did|spent|logged|got|worked|put in)\s+(?P<arg>\d+\s*{_UNITS}?)", re.I)),
-    ("log_minutes", re.compile(rf"^\s*(?P<arg>\d+\s*{_UNITS})\s*$", re.I)),
-    # Proposal replies are unambiguous and must not be shadowed.
-    ("approve", re.compile(r"\b(approve|approved|looks good|lgtm)\b", re.I)),
-    ("reject", re.compile(r"\b(reject|discard|scrap (it|that))\b", re.I)),
-    ("ingest", re.compile(r"\bingest\b\s*(?P<arg>.*)", re.I)),
-    # "busy until friday" is a decline *and* a mute, so it must win over
-    # "not now" and over the bare clock/duration patterns.
-    ("busy", re.compile(
-        r"\b(?:busy|swamped|tied up|in class|slammed|out)\b\s*(?P<arg>.*)", re.I)),
-    ("not_now", re.compile(r"\b(not now|later|nope|no thanks|nah|pass)\b", re.I)),
-    ("something_else", re.compile(r"\b(something else|next|other|different)\b", re.I)),
+        rf"\b(?:did|spent|logged|worked|put in)\s+(?P<arg>\d+(?:\.\d+)?\s*{_UNITS}?)", re.I)),
+    ("log_minutes", re.compile(rf"^\s*(?P<arg>\d+(?:\.\d+)?\s*{_UNITS})\s*$", re.I)),
+    # "busy until friday" is about you, not the assignment, so it wins over "not now".
+    ("busy", re.compile(r"\b(?:busy|swamped|tied up|in class)\b\s*(?P<arg>.*)", re.I)),
     ("snooze", re.compile(r"\bsnooze\b\s*(?P<arg>.*)", re.I)),
-    ("unmute", re.compile(r"\b(unmute|unsilence|back on)\b", re.I)),
-    ("mute", re.compile(r"\b(mute|shush|quiet)\b\s*(?P<arg>.*)", re.I)),
-    ("undo", re.compile(r"\b(undo|unskip|nevermind|never mind)\b", re.I)),
-    ("skip", re.compile(r"\b(skip|drop|forget it)\b", re.I)),
-    # Must precede "done", which would otherwise swallow "all done".
-    ("finish_all", re.compile(
-        r"\b(all done|fully done|completely done|finished it|"
-        r"done with (?:it|the whole thing))\b", re.I)),
-    ("done", re.compile(r"\b(done|did it|finished|complete[d]?|yep|got it)\b", re.I)),
-    ("sheet", re.compile(r"\b(sheet|spreadsheet)\b", re.I)),
-    ("status", re.compile(r"\b(status|what'?s left|pile)\b", re.I)),
-    ("sync", re.compile(r"\b(sync|refresh)\b", re.I)),
-    ("capacity", re.compile(r"\b(capacity|will it fit|does it fit)\b", re.I)),
-    ("why", re.compile(r"\bwhy\b", re.I)),
-    ("help", re.compile(r"\b(help|commands|\?)\b", re.I)),
-    ("gap", re.compile(r"\bgap\b\s*(?P<arg>.*)", re.I)),
+    ("something_else", re.compile(r"\b(something else|anything else|different one)\b", re.I)),
+    # Before "done", which would otherwise swallow "not done yet".
+    ("not_now", re.compile(r"\b(not now|not yet|not done|not finished|later|no thanks|nah|nope)\b", re.I)),
+    ("done", re.compile(r"\b(done|did it|finished|completed?)\b", re.I)),
+    ("status", re.compile(r"\b(status|what'?s left)\b", re.I)),
+    ("help", re.compile(r"^\s*(help|commands|\?)\s*$", re.I)),
 ]
 
 
@@ -62,9 +43,7 @@ def parse(text: str) -> Command | None:
     for name, pattern in _PATTERNS:
         match = pattern.search(text)
         if match:
-            arg = ""
-            if "arg" in pattern.groupindex:
-                arg = (match.group("arg") or "").strip()
+            arg = (match.group("arg") or "").strip() if "arg" in pattern.groupindex else ""
             return Command(name, arg)
     return None
 
