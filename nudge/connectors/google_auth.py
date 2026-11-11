@@ -1,7 +1,7 @@
 """OAuth installed-app flow, token refresh, and the retry wrapper.
 
 Every Google call in this codebase goes through `execute()` so that 429s and
-5xx get exponential backoff in one place (plan §12).
+5xx get exponential backoff in one place.
 """
 from __future__ import annotations
 

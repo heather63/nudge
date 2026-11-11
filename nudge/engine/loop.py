@@ -77,7 +77,7 @@ class NagEngine:
         return report
 
     async def _warn_auth(self, message: str, now: datetime) -> None:
-        """DM about a broken token rather than dying quietly (plan §12)."""
+        """DM about a broken token rather than dying quietly."""
         last = self.repo.kv_time(LAST_AUTH_WARNING)
         if last and tu.minutes_between(last, now) < AUTH_WARNING_COOLDOWN_HOURS * 60:
             log.warning("auth problem (already warned): %s", message)

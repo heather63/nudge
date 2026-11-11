@@ -1,4 +1,4 @@
-"""discord.py client. DM in, DM out — the only user interface (plan §1)."""
+"""discord.py client. DM in, DM out — the only user interface."""
 from __future__ import annotations
 
 import asyncio

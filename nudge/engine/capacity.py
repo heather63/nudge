@@ -2,7 +2,7 @@
 
 Two consumers on the same math, so the nag and the warning can never disagree:
 the `pressure` term in scoring (every tick, per assignment) and the once-daily
-"this no longer fits" check (plan §9).
+"this no longer fits" check.
 
 Availability comes from real free intervals when they have been measured, and
 falls back to WORKABLE_HOURS_PER_DAY when they have not.
@@ -123,7 +123,7 @@ def usable_minutes(
     free_intervals: list[Interval] | None = None,
     available_min: float | None = None,
 ) -> float:
-    """Available time discounted by the realism factor (plan §9's 0.6)."""
+    """Available time discounted by the realism factor."""
     available = (
         available_min
         if available_min is not None
@@ -177,7 +177,7 @@ def fits(
     return headroom_minutes(remaining_min, now, due_at, available_min) >= 0
 
 
-# --- the daily check (plan §9) -------------------------------------------
+# --- the daily check -----------------------------------------------------
 @dataclass(slots=True)
 class CapacityWarning:
     assignment_id: int
@@ -226,7 +226,7 @@ def daily_check(
     """Compare remaining work against real free time. Warn once per assignment.
 
     A scalar comparison, not a scheduler — but it is the only part of the system
-    that says something you did not already know (plan §9).
+    that says something you did not already know.
     """
     warned = set(json.loads(repo.kv_get("capacity_warned") or "[]"))
     still_warned: set[int] = set()

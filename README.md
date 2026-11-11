@@ -7,6 +7,26 @@ Opportunistic, not planned: no weekly schedule, no slot assignment. A ranked
 pile of assignments, and the best-fitting one gets offered — time-boxed to the
 gap — whenever a gap opens.
 
+![tests](https://github.com/heather63/nudge/actions/workflows/tests.yml/badge.svg)
+
+**At a glance**
+
+- **Finds real free time.** Reads Google Calendar `freeBusy` across every
+  calendar and inverts it into gaps, respecting quiet hours and a daily budget.
+- **Offers exactly one thing.** A deterministic weighted score (urgency,
+  workload pressure, fit, staleness, continuity, declines) picks the single best
+  assignment for the gap you have right now.
+- **Talks in plain replies.** `did 40`, `snooze tomorrow`, `busy until friday`:
+  a tolerant parser turns DM replies into progress and scheduling decisions.
+- **Three-way sync without data loss.** A Google Sheet, a local SQLite mirror
+  and Google Tasks stay reconciled under explicit conflict rules.
+- **Sizes work from the documents.** Drop an assignment PDF in a folder and
+  Claude proposes an expected length for you to approve. The LLM never decides
+  *when* anything happens.
+- **Warns before it's too late.** A daily capacity check flags work that no
+  longer fits in the free time left before its due date.
+- **184 unit tests**, no network access needed.
+
 ## How it fits together
 
 ```
@@ -31,6 +51,8 @@ percentage against the expected length and writes it to both.
 
 ## Setup
 
+Python 3.11+ (developed on 3.13).
+
 ```bash
 python3 -m venv .venv
 .venv/bin/pip install -r requirements.txt
@@ -38,6 +60,9 @@ cp .env.example .env          # fill in the Discord values and the Anthropic key
 .venv/bin/python -m nudge.main auth    # Google OAuth, opens a browser
 .venv/bin/python -m nudge.main seed    # build the sheet from your existing Tasks
 ```
+
+Set `NUDGE_TIMEZONE` in `.env` if you are not on US Eastern time; it drives
+quiet hours and what counts as "today".
 
 `seed` reads every task already in your account, guesses a type from the title,
 creates the spreadsheet and fills it in. Expected lengths start blank — set them
@@ -211,12 +236,11 @@ dirty flags; the push in the same pass resolves them.
   its first push is linked, not duplicated. A row you then delete from the
   sheet stays deleted: the lingering task is still *known*, so it is never
   re-adopted.
-- Reopening a completed task in the Tasks app doesn't invent a percentage.
-  nudge tells you it was reopened and asks what it should be.
-- Reopening a completed task in the Tasks app leaves it open. nudge asks for a
-  percentage rather than inventing one, and until you answer neither the sheet's
-  100% nor the next sync closes it again. "Active at 100%" is the marker; it is
-  only reachable that way, so no extra state is needed.
+- Reopening a completed task in the Tasks app leaves it open. nudge tells you
+  it was reopened and asks for a percentage rather than inventing one, and
+  until you answer neither the sheet's 100% nor the next sync closes it again.
+  "Active at 100%" is the marker; it is only reachable that way, so no extra
+  state is needed.
 - A row whose ID cell you clear is reattached by name rather than duplicated,
   and a row you copy-paste gets a fresh ID instead of stealing the original's.
 - `skip` never touches the sheet or Tasks. It is a scheduling decision — "stop

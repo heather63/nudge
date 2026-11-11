@@ -1,4 +1,4 @@
-"""Phase 3 (real gaps) and phase 5 (the daily capacity check)."""
+"""Real calendar gaps and the daily capacity check."""
 from __future__ import annotations
 
 import json

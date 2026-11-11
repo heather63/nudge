@@ -1,4 +1,4 @@
-"""Timezone-aware helpers. Store UTC, compare in local (plan §12)."""
+"""Timezone-aware helpers. Store UTC, compare in local."""
 from __future__ import annotations
 
 import re

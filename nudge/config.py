@@ -1,4 +1,4 @@
-"""All tuning knobs in one file (plan §10).
+"""All tuning knobs in one file.
 
 These get changed constantly in the first month. Nothing else in the codebase
 should hardcode a number that belongs here.
@@ -27,7 +27,7 @@ def _load_dotenv() -> None:
 
 _load_dotenv()
 
-# --- timing -------------------------------------------------------------
+# --- timing --------------------------------------------------------------
 MIN_GAP_MINUTES = 15
 MIN_SESSION_MINUTES = 10        # not worth offering a shorter sitting than this
 TAIL_BUFFER = 5       # minutes shaved off the end of every gap
@@ -38,11 +38,11 @@ MAX_OFFERS_PER_DAY = 6
 QUIET_HOURS = (23, 8)  # local hours [start, end); wraps midnight
 MAX_ESCALATION = 6
 DEFAULT_BUSY_HOURS = 3          # "busy" with no readable duration
-TIMEZONE = "America/New_York"
+TIMEZONE = os.environ.get("NUDGE_TIMEZONE", "America/New_York")
 
-# --- scoring weights (plan §6) ------------------------------------------
+# --- scoring weights -----------------------------------------------------
 # Retune these against the offers table after a couple of weeks. W_FIT is lower
-# than the original plan's 0.30 because `fit` discriminates less once work is
+# than the original 0.30 because `fit` discriminates less once work is
 # time-boxed to the gap rather than pre-cut into chunks.
 W_URGENCY = 0.40
 W_PRESSURE = 0.35
@@ -51,9 +51,9 @@ W_STALENESS = 0.10
 W_CONTINUITY = 0.10
 W_DECLINE = 0.30
 
-# How much of a day realistically goes to coursework at all. Phase 3 replaces
-# this constant with real free time from freeBusy; CAPACITY_REALISM stays, since
-# free time is not the same as time you will actually spend (plan §9).
+# How much of a day realistically goes to coursework at all. Real free time from
+# freeBusy can only lower this; CAPACITY_REALISM discounts it further, since
+# free time is not the same as time you will actually spend.
 WORKABLE_HOURS_PER_DAY = 4.0
 CAPACITY_REALISM = 0.6
 
@@ -69,7 +69,7 @@ FAKE_GAPS = False
 FAKE_GAP_EVERY_MIN = 90            # a synthetic gap opens this often
 FAKE_GAP_LENGTHS = (20, 30, 45, 60)  # cycled in order
 
-# --- google (phase 2-3) --------------------------------------------------
+# --- google --------------------------------------------------------------
 CREDENTIALS_PATH = Path(
     os.environ.get("NUDGE_GOOGLE_CREDENTIALS", PROJECT_ROOT / "credentials.json")
 )
@@ -79,7 +79,7 @@ TOKEN_PATH = Path(os.environ.get("NUDGE_GOOGLE_TOKEN", PROJECT_ROOT / "token.jso
 TASKLISTS: tuple[str, ...] | None = None
 TASKLIST_EXCLUDE: tuple[str, ...] = ()
 DEFAULT_TASKLIST = "naggy"  # home for work with no course. Matches the existing Google Tasks list by title; rename that list in Google Tasks before changing this.
-TASKS_SYNC_MINUTES = 5          # Tasks has no push channel, so poll (plan §4.4)
+TASKS_SYNC_MINUTES = 5          # Tasks has no push channel, so poll
 # A task typed straight into the Tasks app becomes a sheet row on the next
 # reconcile. The sheet stays truth for existence — this is how something gets
 # INTO it from the other side, not a second authority over what already exists.
@@ -89,7 +89,7 @@ DEFAULT_EXPECTED_MINUTES = 120  # when the sheet's expected-length cell is blank
 SPREADSHEET_TITLE = "nudge — assignments"
 SHEET_SYNC_MINUTES = 5          # the sheet has no push channel either
 
-# --- calendar / gap detection (phase 3) ----------------------------------
+# --- calendar / gap detection --------------------------------------------
 # None means every calendar in the account. Subscribed read-only calendars
 # (holidays, sports schedules) often 404 on freeBusy — they are skipped
 # automatically after the first failure, but naming them here avoids the round
@@ -110,7 +110,7 @@ CAPACITY_HORIZON_DAYS = 60      # freeBusy range cap for the daily check
 # single sitting nudge will ever ask for.
 MAX_USABLE_GAP_MINUTES = 120
 
-# --- ingestion + decomposition (phase 4) ---------------------------------
+# --- ingestion + decomposition -------------------------------------------
 # One folder per course, one subfolder per assignment:
 #   ~/assignments/CS 4262/HW1/spec.pdf
 # The course folder matches a Google task list, the assignment folder matches a

@@ -2,7 +2,7 @@
 
 Every message has a deterministic form. An LLM may later be plugged in via
 `set_phraser` to rewrite an offer, but if it fails or is slow the template
-below is what gets sent (plan §12).
+below is what gets sent.
 """
 from __future__ import annotations
 
@@ -241,7 +241,7 @@ def ingest_failed(name: str, message: str) -> str:
 
 # --- capacity and status -------------------------------------------------
 def capacity_warning(warnings: list, now: datetime | None = None) -> str:
-    """The one thing the agent says that you did not already know (plan §9)."""
+    """The one thing the agent says that you did not already know."""
     now = now or tu.now_utc()
     if len(warnings) == 1:
         w = warnings[0]

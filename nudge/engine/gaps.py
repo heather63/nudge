@@ -1,4 +1,4 @@
-"""Gap detection (plan §5).
+"""Gap detection.
 
 `invert_busy` and `Gap` are already in their phase-3 shape; only the source of
 busy intervals changes when connectors/gcal.py arrives.
@@ -79,9 +79,9 @@ class GapSource(Protocol):
 
 
 class FakeGapSource:
-    """Phase 1 stand-in: a synthetic gap opens on a fixed cadence.
+    """Fallback when Google is unavailable: a synthetic gap opens on a fixed cadence.
 
-    Deterministic on purpose — the schedule has to stay debuggable (plan §12).
+    Deterministic on purpose — the schedule has to stay debuggable.
     Lengths cycle through FAKE_GAP_LENGTHS so every gap size gets exercised.
     """
 
@@ -130,7 +130,7 @@ class FakeGapSource:
 
 
 class CalendarGapSource:
-    """Real gaps: freeBusy inverted into free intervals (plan §5).
+    """Real gaps: freeBusy inverted into free intervals.
 
     `refresh` does the network call and is expected to run off the event loop;
     `current_gap` only reads the cache, so a tick never blocks on Google.

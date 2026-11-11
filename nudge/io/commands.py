@@ -1,4 +1,4 @@
-"""DM reply parsing (plan §7).
+"""DM reply parsing.
 
 Case-insensitive, tolerant of extra words. Kept separate from bot.py so the
 whole command surface is testable without a Discord connection.

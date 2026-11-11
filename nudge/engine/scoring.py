@@ -1,4 +1,4 @@
-"""Ranking the chunk pile (plan §6). Plain weighted sum, deterministic."""
+"""Ranking the chunk pile. Plain weighted sum, deterministic."""
 from __future__ import annotations
 
 import math

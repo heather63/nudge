@@ -1,4 +1,4 @@
-"""Quiet hours, budgets, cooldowns, escalation (plan §5, §7)."""
+"""Quiet hours, budgets, cooldowns, escalation."""
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -73,7 +73,7 @@ def may_nag(repo: Repo, now: datetime) -> Verdict:
 
 
 def escalation_level(decline_count: int) -> int:
-    """1 neutral, 2-3 direct, 4-5 blunt, 6 final (plan §7).
+    """1 neutral, 2-3 direct, 4-5 blunt, 6 final.
 
     Keyed on *consecutive declines*, not offers: a twenty-hour project is
     legitimately offered many times, and any progress resets the count.

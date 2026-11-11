@@ -5,7 +5,7 @@ assignments is the kind of chore that kills a system before it starts. So the
 documents get read once and an estimate is proposed — behind an approval gate,
 because a wrong number silently distorts every ranking and capacity warning.
 
-The LLM never decides *when* anything happens (plan §12).
+The LLM never decides *when* anything happens.
 """
 from __future__ import annotations
 

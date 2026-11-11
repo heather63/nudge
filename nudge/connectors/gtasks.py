@@ -65,7 +65,7 @@ class TasksClient:
         return created["id"]
 
     def list_tasks(self, tasklist_id: str, updated_min: str | None = None) -> list[dict]:
-        """Delta sync. showCompleted+showHidden or completions vanish (plan §4.3)."""
+        """Delta sync. showCompleted+showHidden or completions vanish."""
         tasks: list[dict] = []
         page_token = None
         while True:

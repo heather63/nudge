@@ -1,6 +1,6 @@
 """Assignment documents to plain text. Context for decomposition only.
 
-File activity is never a completion signal (plan §1) — these documents exist
+File activity is never a completion signal — these documents exist
 solely so the LLM has something to break down.
 """
 from __future__ import annotations
